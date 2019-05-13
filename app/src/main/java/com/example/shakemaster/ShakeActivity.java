@@ -6,13 +6,15 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.os.Handler;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.TextView;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -27,6 +29,7 @@ public class ShakeActivity extends AppCompatActivity {
     private int goColor = Color.parseColor("#00E676");
     private int stopColor = Color.parseColor("#FF1744");
 
+    private MediaPlayer mp = new MediaPlayer();
     private Random rand = new Random();
     private Timer timer = new Timer();
     private TimerTask timerTask;
@@ -45,7 +48,7 @@ public class ShakeActivity extends AppCompatActivity {
 
     // Shake detection credits: https://stackoverflow.com/questions/2317428/how-to-refresh-app-upon-shaking-the-device
     private SensorManager mSensorManager;
-    private final int SHAKE_THRESHOLD = 12;
+    private final int SHAKE_THRESHOLD = 9;
     private float mAccel; // acceleration apart from gravity
     private float mAccelCurrent; // current acceleration including gravity
     private float mAccelLast; // last acceleration including gravity
@@ -66,7 +69,28 @@ public class ShakeActivity extends AppCompatActivity {
             mAccel = mAccel * 0.9f + delta; // perform low-cut filter
 
             if (mAccel > SHAKE_THRESHOLD) {
-                score += shouldShake ? 1 : -1;
+                String soundType;
+
+                if (shouldShake) {
+                    score++;
+                    soundType = "affirm";
+                } else {
+                    score--;
+                    soundType = "neg";
+                }
+                int id = getResources()
+                        .getIdentifier(soundType + (rand.nextInt(8)+1),
+                                "raw", getApplicationInfo().packageName);
+
+                if (!mp.isPlaying()) {
+                    try {
+                        mp.reset();
+                        mp.setDataSource(getResources().openRawResourceFd(id));
+                        mp.prepare();
+                    } catch (Exception e) {
+                    }
+                    mp.start();
+                }
                 scoreView.setText(String.valueOf(score));
             }
         }
@@ -96,6 +120,7 @@ public class ShakeActivity extends AppCompatActivity {
         layout = findViewById(R.id.layout);
         scoreView = findViewById(R.id.score);
 
+        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
         scheduleBackgroundChange();
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
