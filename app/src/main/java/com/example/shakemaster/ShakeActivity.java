@@ -6,12 +6,20 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Handler;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class ShakeActivity extends AppCompatActivity {
+
+    final Handler uiHandler = new Handler();
 
     private ConstraintLayout layout;
     private TextView scoreView;
@@ -19,6 +27,18 @@ public class ShakeActivity extends AppCompatActivity {
     private int goColor = Color.parseColor("#00E676");
     private int stopColor = Color.parseColor("#FF1744");
 
+    private Random rand = new Random();
+    private Timer timer = new Timer();
+    private TimerTask timerTask;
+
+    private final Runnable toggleBackgroundRunnable = new Runnable() {
+        @Override
+        public void run() {
+            shouldShake = !shouldShake;
+            layout.setBackgroundColor(shouldShake ? goColor : stopColor);
+            scheduleBackgroundChange();
+        }
+    };
 
     private boolean shouldShake = true;
     private int score = 0;
@@ -52,9 +72,20 @@ public class ShakeActivity extends AppCompatActivity {
         }
     };
 
+    private void scheduleBackgroundChange() {
+        if (timerTask != null) {
+            timerTask.cancel();
+        }
+
+        timerTask = new TimerTask() {
+            @Override
+            public void run() { toggleBackground(); }
+        };
+        timer.schedule(timerTask, rand.nextInt(10000) + 2000);
+    }
+
     private void toggleBackground() {
-        shouldShake = !shouldShake;
-        layout.setBackgroundColor(shouldShake ? goColor : stopColor);
+        uiHandler.post(toggleBackgroundRunnable);
     }
 
     @Override
@@ -65,6 +96,8 @@ public class ShakeActivity extends AppCompatActivity {
         layout = findViewById(R.id.layout);
         scoreView = findViewById(R.id.score);
 
+        scheduleBackgroundChange();
+
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
         mAccel = 0.00f;
@@ -74,6 +107,8 @@ public class ShakeActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        timer.cancel();
+        timerTask.cancel();
         mSensorManager.unregisterListener(mSensorListener);
         super.onPause();
     }
@@ -81,6 +116,7 @@ public class ShakeActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        scheduleBackgroundChange();
         mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
     }
 }
