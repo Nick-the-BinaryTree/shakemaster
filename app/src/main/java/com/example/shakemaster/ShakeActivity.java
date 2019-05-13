@@ -1,6 +1,7 @@
 package com.example.shakemaster;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -15,6 +16,11 @@ public class ShakeActivity extends AppCompatActivity {
     private ConstraintLayout layout;
     private TextView scoreView;
 
+    private int goColor = Color.parseColor("#00E676");
+    private int stopColor = Color.parseColor("#FF1744");
+
+
+    private boolean shouldShake = true;
     private int score = 0;
 
     // Shake detection credits: https://stackoverflow.com/questions/2317428/how-to-refresh-app-upon-shaking-the-device
@@ -40,10 +46,16 @@ public class ShakeActivity extends AppCompatActivity {
             mAccel = mAccel * 0.9f + delta; // perform low-cut filter
 
             if (mAccel > SHAKE_THRESHOLD) {
-                scoreView.setText(String.valueOf(++score));
+                score += shouldShake ? 1 : -1;
+                scoreView.setText(String.valueOf(score));
             }
         }
     };
+
+    private void toggleBackground() {
+        shouldShake = !shouldShake;
+        layout.setBackgroundColor(shouldShake ? goColor : stopColor);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
